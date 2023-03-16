@@ -1,9 +1,10 @@
 import pygame as pg
 import config
 import time
-from board import cBoard
+from board import Board, Square, Pos
+from game import Game
 
-IMAGE_NAMES = ['base', 'empty', 'glasses', 'gold', 'sharp', 'strong', 'water', 'boots', 'fast', 'gloves', 'scroll', 'stone', 'tree']
+IMAGE_NAMES = ['empty', 'base', 'sharp', 'strong', 'fast', 'glasses', 'gloves', 'boots', 'gold', 'water', 'tree', 'stone', 'scroll']
 IMAGES = {}
 
 def main():
@@ -14,15 +15,16 @@ def main():
     clock = pg.time.Clock()
     pg.display.set_caption('Mystery of the druids')
 
-    for name in IMAGE_NAMES:
-        IMAGES[name] = pg.image.load('imgs/' + name + '.png').convert_alpha()
+    for idx, name in zip(Square, IMAGE_NAMES):
+        IMAGES[idx] = pg.image.load('imgs/' + name + '.png').convert_alpha()
 
-    board = cBoard(boardSizeX, boardSizeY)
+    board = Board(Pos(boardSizeX, boardSizeY))
     seed = round(time.time())
     print(f'map seed: {seed}')
     board.generate_map(seed)
 
     screen.fill(config.SCREEN_BKG_COLOR)
+    game = Game(board, config.TEAM_CNT)
 
     while True:
         for event in pg.event.get():
@@ -34,12 +36,17 @@ def main():
                     seed = round(time.time())
                     print(f'map seed: {seed}')
                     board.generate_map(seed)
+                elif event.key == pg.K_s:
+                    if game.running:
+                        game.pause()
+                    else:
+                        game.run()
 
-        #for team in teams:
-        #    team.make_move()
+        if game.running:
+            game.step()
 
         for square in board.edited_squares():
-            screen.blit(IMAGES[board.get_square(square.x, square.y)], (square.x * 32, square.y * 32))
+            screen.blit(IMAGES[board.get_square(square)], (square.x * 32, square.y * 32))
 
         clock.tick(30)
         pg.display.flip()

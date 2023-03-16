@@ -1,130 +1,138 @@
 import random
 from config import *
 from math import sqrt
+from enum import Enum
+from dataclasses import dataclass
 
-SQR_EMPTY = 'empty'
-SQR_WOOD = 'tree'
-SQR_GOLD = 'gold'
-SQR_STONE = 'stone'
-SQR_WATER = 'water'
-SQR_BASE = 'base'
-SQR_BOOTS = 'boots'
-SQR_GLASSES = 'glasses'
-SQR_GLOVES = 'gloves'
+class Square(Enum):
+    EMPTY = 0
+    BASE = 1
+    SHARP = 2
+    STRONG = 3
+    FAST = 4
+    GLASSES = 5
+    GLOVES = 6
+    BOOTS = 7
+    GOLD = 8
+    WATER = 9
+    TREE = 10
+    STONE = 11
+    SCROLL = 12
 
-def distance(x1, y1, x2, y2):
-    return sqrt(abs(x1 - x2)**2 + abs(y1 - y2)**2)
+@dataclass
+class Pos:
+    x: int
+    y: int
 
-class cSquare:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
+    def __hash__(self):
+        return 10000 * self.x + self.y
 
-class cBoard:
-    def __init__(self, sizex, sizey):
-        self.sizex = sizex
-        self.sizey = sizey
-        self.squares = [SQR_EMPTY] * sizex * sizey
+def distance(p1: Pos, p2: Pos) -> float:
+    return sqrt(abs(p1.x - p2.x)**2 + abs(p1.y - p2.y)**2)
+
+class Board:
+    def __init__(self, size: Pos):
+        self.size: Pos = size
+        self.squares = [Square.EMPTY] * size.x * size.y
         self.editedSquares = set()
 
     def clear(self):
-        self.squares = [SQR_EMPTY] * self.sizex * self.sizey
+        self.squares = [Square.EMPTY] * self.size.x * self.size.y
         self.editedSquares = set()
 
     def edited_squares(self):
         while self.editedSquares:
             yield self.editedSquares.pop()
 
-    def get_square(self, x, y):
-        return self.squares[x + self.sizex*y]
+    def get_square(self, p: Pos):
+        return self.squares[p.x + self.size.x*p.y]
 
-    def in_bounds(self, x, y):
-        return 0 <= x < self.sizex and 0 <= y < self.sizey
+    def in_bounds(self, p: Pos):
+        return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
 
-    def move_square(self, fromX, fromY, toX, toY):
-        self.set_square(toX, toY, self.get_square(fromX, fromY))
-        self.set_square(fromX, fromY, SQR_EMPTY)
+    def move_square(self, pFrom: Pos, pTo: Pos):
+        self.set_square(pTo, self.get_square(pFrom))
+        self.set_square(pFrom, Square.EMPTY)
 
-    def set_square(self, x, y, value):
-        self.squares[x + self.sizex*y] = value
-        self.editedSquares.add(cSquare(x, y))
+    def set_square(self, p: Pos, value):
+        self.squares[p.x + self.size.x*p.y] = value
+        self.editedSquares.add(p)
 
-    def place_stone(self, x, y, size):
-        if not self.in_bounds(x, y):
+    def place_stone(self, p: Pos, size: int):
+        if not self.in_bounds(p):
             return
-        self.set_square(x, y, SQR_STONE)
+        self.set_square(p, Square.STONE)
 
         if size > 1:
-            self.place_stone(x+1, y, size-1)
-            self.place_stone(x-1, y, size-1)
-            self.place_stone(x, y+1, size-1)
-            self.place_stone(x, y-1, size-1)
+            self.place_stone(Pos(p.x+1, p.y), size-1)
+            self.place_stone(Pos(p.x-1, p.y), size-1)
+            self.place_stone(Pos(p.x, p.y+1), size-1)
+            self.place_stone(Pos(p.x, p.y-1), size-1)
 
-    def place_water_ellipse(self, centre1X, centre1Y, centre2X, centre2Y, x, y, radius):
-        if not self.in_bounds(x, y):
+    def place_water_ellipse(self, centre1: Pos, centre2: Pos, p: Pos, radius):
+        if not self.in_bounds(p) or self.get_square(p) == Square.WATER:
             return
 
-        if self.get_square(x, y) == SQR_WATER:
+        if distance(p, centre1) + distance(p, centre2) > radius:
             return
 
-        if distance(x, y, centre1X, centre1Y) + distance(x, y, centre2X, centre2Y) > radius:
-            return
+        self.set_square(p, Square.WATER)
 
-        self.set_square(x, y, SQR_WATER)
+        self.place_water_ellipse(centre1, centre2, Pos(p.x+1, p.y), radius)
+        self.place_water_ellipse(centre1, centre2, Pos(p.x-1, p.y), radius)
+        self.place_water_ellipse(centre1, centre2, Pos(p.x, p.y+1), radius)
+        self.place_water_ellipse(centre1, centre2, Pos(p.x, p.y-1), radius)
 
-        self.place_water_ellipse(centre1X, centre1Y, centre2X, centre2Y, x+1, y, radius)
-        self.place_water_ellipse(centre1X, centre1Y, centre2X, centre2Y, x-1, y, radius)
-        self.place_water_ellipse(centre1X, centre1Y, centre2X, centre2Y, x, y+1, radius)
-        self.place_water_ellipse(centre1X, centre1Y, centre2X, centre2Y, x, y-1, radius)
-
-    def find_empty_square(self):
+    def find_empty_square(self) -> Pos:
         i = 0
 
         while True:
-            x, y = random.randrange(0, self.sizex), random.randrange(0, self.sizey)
-            if self.get_square(x, y) == SQR_EMPTY:
-                return x, y
+            p = Pos(random.randrange(0, self.size.x), random.randrange(0, self.size.y))
+            if self.get_square(p) == Square.EMPTY:
+                return p
 
             if i == 100:
                 raise RuntimeError("Cannot find an empty square")
             i += 1
-
 
     def generate_map(self, seed):
         self.clear()
         random.seed(seed)
 
         for centresDistance, radius in LAKES:
-            x1, y1 = self.find_empty_square()
-            x2, y2 = x1 + random.randrange(0, centresDistance), y1 + random.randrange(0, centresDistance)
-            self.place_water_ellipse(x1, y1, x2, y2, x1, y1, distance(x1, y1, x2, y2) + radius)
+            p1 = self.find_empty_square()
+            p2 = Pos(p1.x + random.randrange(0, centresDistance), p1.y + random.randrange(0, centresDistance))
+            self.place_water_ellipse(p1, p2, p1, distance(p1, p2) + radius)
 
 
         for forestSize, density in FORESTS:
             # forest centre
-            x, y = self.find_empty_square()
+            p1 = self.find_empty_square()
 
             for maxOffset in range(2, forestSize):
                 for i in range(density):
-                    xoffset = random.randrange(-maxOffset, maxOffset+1)
-                    yoffset = random.randrange(-maxOffset, maxOffset+1)
-                    if self.in_bounds(x + xoffset, y + yoffset) and self.get_square(x + xoffset, y + yoffset) == SQR_EMPTY:
-                        self.set_square(x + xoffset, y + yoffset, SQR_WOOD)
+                    offset = Pos(random.randrange(-maxOffset, maxOffset+1), random.randrange(-maxOffset, maxOffset+1))
+                    p2 = Pos(p1.x + offset.x, p1.y + offset.y)
+                    if self.in_bounds(p2) and self.get_square(p2) == Square.EMPTY:
+                        self.set_square(p2, Square.TREE)
 
         for i in range(GOLDS):
-            self.set_square(*self.find_empty_square(), SQR_GOLD)
+            self.set_square(self.find_empty_square(), Square.GOLD)
 
         for i in range(LONELY_TREES):
-            self.set_square(*self.find_empty_square(), SQR_WOOD)
+            self.set_square(self.find_empty_square(), Square.TREE)
 
         for stoneSize in STONES:
-            self.place_stone(*self.find_empty_square(), stoneSize)
+            self.place_stone(self.find_empty_square(), stoneSize)
 
-        self.set_square(*self.find_empty_square(), SQR_BASE)
+        self.set_square(self.find_empty_square(), Square.BASE)
 
         for _ in range(BOOTS_CNT):
-            self.set_square(*self.find_empty_square(), SQR_BOOTS)
+            self.set_square(self.find_empty_square(), Square.BOOTS)
         for _ in range(GLOVES_CNT):
-            self.set_square(*self.find_empty_square(), SQR_GLOVES)
+            self.set_square(self.find_empty_square(), Square.GLOVES)
         for _ in range(GLASSES_CNT):
-            self.set_square(*self.find_empty_square(), SQR_GLASSES)
+            self.set_square(self.find_empty_square(), Square.GLASSES)
+
+        for _ in range(SCROLL_CNT):
+            self.set_square(self.find_empty_square(), Square.SCROLL)
