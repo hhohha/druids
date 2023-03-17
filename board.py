@@ -18,6 +18,7 @@ class Square(Enum):
     TREE = 10
     STONE = 11
     SCROLL = 12
+    UNKNOWN = 13
 
 @dataclass
 class Pos:
@@ -35,6 +36,7 @@ class Board:
         self.size: Pos = size
         self.squares = [Square.EMPTY] * size.x * size.y
         self.editedSquares = set()
+        self.basePos = None
 
     def clear(self):
         self.squares = [Square.EMPTY] * self.size.x * self.size.y
@@ -57,6 +59,15 @@ class Board:
     def set_square(self, p: Pos, value):
         self.squares[p.x + self.size.x*p.y] = value
         self.editedSquares.add(p)
+
+    def get_vision(self, pos: Pos, sight: int):
+        startX = max(pos.x - sight, 0)
+        startY = max(pos.y - sight, 0)
+        endX = min(pos.x + sight + 1, self.size.x)
+        endY = min(pos.y + sight + 1, self.size.y)
+
+        for x, y in zip(range(startX, endX), range(startY, endY)):
+            yield Pos(x, y), self.get_square(Pos(x, y))
 
     def place_stone(self, p: Pos, size: int):
         if not self.in_bounds(p):
@@ -125,7 +136,8 @@ class Board:
         for stoneSize in STONES:
             self.place_stone(self.find_empty_square(), stoneSize)
 
-        self.set_square(self.find_empty_square(), Square.BASE)
+        self.basePos = self.find_empty_square()
+        self.set_square(self.basePos, Square.BASE)
 
         for _ in range(BOOTS_CNT):
             self.set_square(self.find_empty_square(), Square.BOOTS)
