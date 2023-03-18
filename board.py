@@ -1,32 +1,27 @@
 import random
+from typing import Dict, Tuple, Set
+
 from config import *
 from math import sqrt
-from enum import Enum
 from dataclasses import dataclass
+from enums import Square, Direction, Color, AgentType
 
-class Square(Enum):
-    EMPTY = 0
-    BASE = 1
-    SHARP = 2
-    STRONG = 3
-    FAST = 4
-    GLASSES = 5
-    GLOVES = 6
-    BOOTS = 7
-    GOLD = 8
-    WATER = 9
-    TREE = 10
-    STONE = 11
-    SCROLL = 12
-    UNKNOWN = 13
 
-@dataclass
+@dataclass(frozen=True)
 class Pos:
     x: int
     y: int
 
-    def __hash__(self):
-        return 10000 * self.x + self.y
+    def go(self, direction: Direction) -> 'Pos':
+        if direction == Direction.UP:
+            return Pos(self.x, self.y-1)
+        if direction == Direction.DOWN:
+            return Pos(self.x, self.y+1)
+        if direction == Direction.LEFT:
+            return Pos(self.x-1, self.y)
+        if direction == Direction.RIGHT:
+            return Pos(self.x+1, self.y)
+        raise ValueError(f'invalid direction: {direction}')
 
 def distance(p1: Pos, p2: Pos) -> float:
     return sqrt(abs(p1.x - p2.x)**2 + abs(p1.y - p2.y)**2)
@@ -35,8 +30,9 @@ class Board:
     def __init__(self, size: Pos):
         self.size: Pos = size
         self.squares = [Square.EMPTY] * size.x * size.y
-        self.editedSquares = set()
-        self.basePos = None
+        self.editedSquares: Set[Pos] = set()
+        self.basePos: Pos = Pos(0, 0)
+        self.characterSquares: Dict[Tuple[Color, AgentType], Pos] = {}
 
     def clear(self):
         self.squares = [Square.EMPTY] * self.size.x * self.size.y
@@ -51,6 +47,9 @@ class Board:
 
     def in_bounds(self, p: Pos):
         return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
+
+    def is_accessible(self, pos: Pos) -> bool:
+        return self.in_bounds(pos) and self.get_square(pos) not in [Square.STONE]
 
     def move_square(self, pFrom: Pos, pTo: Pos):
         self.set_square(pTo, self.get_square(pFrom))

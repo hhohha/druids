@@ -29,4 +29,11 @@ GLOVES_CNT = 2
 GLASSES_CNT = 2
 SCROLL_CNT = 30
 
-TEAM_CNT = 4
+TEAM_CNT = 1
+
+SPELL_PAYOFFS = {
+    0: 2,
+    3: 4,
+    4: 6,
+    5: 9
+}
