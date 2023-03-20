@@ -313,14 +313,7 @@ class Druid(Figure):
         return list(filter(self.team.can_create_spell, self.team.spells))   # TODO - remove list
 
     def get_action(self) -> Action:
-        if self.team.scrolls >= 3:
-            return Action(ActionType.READ, 3)
-
-        availableSpells = self.get_available_spells()
-        if availableSpells:
-            return Action(ActionType.CREATE, availableSpells[0])
-
-        return Action(ActionType.SKIP)
+        Action(ActionType.SKIP)
 
 
 class Sharp(MovingFigure):

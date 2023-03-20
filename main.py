@@ -3,6 +3,20 @@ import config
 import time
 from board import Board, Square, Pos
 from game import Game
+from strategy import find_path
+
+# TODOs
+#  - different colors for teams
+#  - display info on the side
+#  - implement reasonable strategies
+#  - implement modular strategies
+#  - continue improving typings
+#  - press to step
+#  - change speed
+#  - unplug map
+#  - record history
+#  - coalitions
+
 
 IMAGE_NAMES = ['empty', 'base', 'sharp', 'strong', 'fast', 'glasses', 'gloves', 'boots', 'gold', 'water', 'tree', 'stone', 'scroll']
 IMAGES = {}
