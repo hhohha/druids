@@ -1,11 +1,12 @@
 import random
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import List, Deque
+from typing import List, Deque, Optional
 from druids.agent import Agent
 from druids.board import Pos
 from druids.enums import ActionType, Direction, Square
 from druids.game import Action
+from druids.pathfinding import find_path_a_star
 
 
 class AgentMoving(Agent, ABC):
@@ -16,6 +17,7 @@ class AgentMoving(Agent, ABC):
         self.upgraded = False
         self.destinationPriority: int = 0
         self.currentPath: Deque[Pos] = deque()
+        self.upgradeType = None
 
         self.actions.update({
             ActionType.GO: self.perform_action_go,
@@ -102,32 +104,21 @@ class AgentMoving(Agent, ABC):
             self.bag = []
         self.currentAP = 0
 
-    def choose_random_direction(self) -> Direction:
-        availableDirs: List[Direction] = []
-        for direction in Direction:
-            if self.board.is_accessible(self.pos.go(direction)):
-                availableDirs.append(direction)
-
-        return random.choice(availableDirs)
-
-    def look_for_base(self):
-        if self.pos.x > self.board.basePos.x and self.board.is_accessible(self.pos.go(Direction.LEFT)):
-            return Direction.LEFT
-        if self.pos.x < self.board.basePos.x and self.board.is_accessible(self.pos.go(Direction.RIGHT)):
-            return Direction.RIGHT
-        if self.pos.y < self.board.basePos.y and self.board.is_accessible(self.pos.go(Direction.DOWN)):
-            return Direction.DOWN
-        if self.pos.y > self.board.basePos.y and self.board.is_accessible(self.pos.go(Direction.UP)):
-            return Direction.UP
-
-        return self.choose_random_direction()
+    def find_closest(self, resource: Square) -> Optional[Pos]:
+        closestPos: Optional[Pos] = None
+        closestDist: int = 10000
+        for itemPos in self.team.knownResourcesCtg[resource]:
+            dist: int = self.pos.distance_to(itemPos)
+            if dist < closestDist:
+                closestPos, closestDist = itemPos, dist
+        return closestPos
 
 
     def get_action_simple(self) -> Action:
         """
         Simplest reasonable strategy
          - if at the base and got something - drop it
-         - if location of upgrade is known and I don't have it yet - got there and pick it
+         - if location of upgrade is known and I don't have it yet - get there and pick it
          - if bag is full - go to the base
          - find the closest resource and go pick it
          - find the closest unknown square and explore it
@@ -135,17 +126,21 @@ class AgentMoving(Agent, ABC):
         if len(self.bag) > 0 and self.pos == self.board.basePos:
             return Action(ActionType.DROP)
 
-        # am i already pursuing an upgrade?
+        # am i already pursuing an upgrade (highest prio)?
         if self.destinationPriority == 10 and self.currentPath:
             nextPos: Pos = self.currentPath.popleft()
             if self.board.is_accessible(nextPos):
-                return Action(ActionType.GO)
+                return Action(ActionType.GO, self.pos.get_direction_to(nextPos))
 
+        # can i start to pursue an upgrade
         if not self.upgraded and self.team.knownResourcesCtg[self.upgradeType]:
             self.destinationPriority = 10
-            self.destination = self.find_closest(self.upgradeType)
+            destination = self.find_closest(self.upgradeType)
+            self.currentPath = find_path_a_star(self.board, self.pos, destination)
+            return self.get_action_simple()
 
-        if self.destination:
+        if self.is_bag_full():
+
             return Action(ActionType.GO, self.destination.pop())
 
         # can drop stuff - drop
