@@ -12,7 +12,6 @@ LONELY_TREES = 20
 
 GOLDS = 30
 
-
 STONES = [4, 3, 3, 2] + [1]*20
 
 LAKES = [
@@ -29,3 +28,12 @@ BOOTS_CNT = 2
 GLOVES_CNT = 2
 GLASSES_CNT = 2
 SCROLL_CNT = 30
+
+TEAM_CNT = 1
+
+SPELL_PAYOFFS = {
+    0: 2,
+    3: 4,
+    4: 6,
+    5: 9
+}

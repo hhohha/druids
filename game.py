@@ -1,50 +1,60 @@
-from abc import ABC, abstractmethod
-from board import Pos
+from typing import List
+from dataclasses import dataclass
+from config import SPELL_PAYOFFS
+from druids.team import Team
+from enums import ActionType, Color
+import random
+
+
+@dataclass(frozen=True)
+class Spell:
+    gold: int
+    stone: int
+    water: int
+    wood: int
+    payoff: int
+
+
+class Action:
+    def __init__(self, actionType: ActionType, param=None):
+        self.actionType = actionType
+        self.param = param
+
 
 class Game:
-    def __init__(self, teamCnt: int):
+    def __init__(self, board, teamCnt: int):
         self.running = False
-        self.board = None
-        self.teams = [Team] * teamCnt
+        self.board = board
+        self.teams = [Team(self, self.board, None, Color.BLACK)] * teamCnt
+        self.steps = 0
+        self.generate_starting_spells()
 
-    def start(self):
+    def reset(self):  # TODO - implement
+        pass
+
+    def run(self):
         self.running = True
 
-class Team:
-    def __init__(self, teamStrategy):
-        self.wood = 0
-        self.gold = 0
-        self.water = 0
-        self.stone = 0
-        self.strategy = teamStrategy
+    def pause(self):
+        self.running = False
 
-        self.characters = [Druid(), Fast(), Strong(), Sharp()]
+    def step(self):
+        for team in self.teams:
+            team.play()
 
-    def play(self):
-        for character in self.characters:
-            character.play()
+    def generate_starting_spells(self):
+        for _ in range(random.randint(1, 6)):
+            spell = self.generate_spell(0)
+            for team in self.teams:
+                team.spells.add(spell)
 
-class Figure(ABC):
-    def __init__(self):
-        self.pos: Pos
-        self.bag = []
+    @staticmethod
+    def generate_spell(scrolls: int) -> Spell:
+        if scrolls not in SPELL_PAYOFFS:
+            raise ValueError(f'cannot generate spell from {scrolls} scrolls')
 
-    @abstractmethod
-    def play(self):
-        pass
-
-class Druid(Figure):
-    def play(self):
-        pass
-
-class Sharp(Figure):
-    def play(self):
-        pass
-
-class Strong(Figure):
-    def play(self):
-        pass
-
-class Fast(Figure):
-    def play(self):
-        pass
+        resources: List[int] = [0, 0, 0, 0]
+        for _ in range(scrolls):
+            resources[random.randint(0, 3)] += 1
+        # return Spell(*resources, SPELL_PAYOFFS[scrolls])
+        return Spell(resources[0], resources[1], resources[2], resources[3], SPELL_PAYOFFS[scrolls])

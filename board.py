@@ -1,31 +1,38 @@
 import random
+from typing import Dict, Tuple, Set
+
 from config import *
 from math import sqrt
-from enum import Enum
 from dataclasses import dataclass
+from enums import Square, Direction, Color, AgentType
 
-class Square(Enum):
-    EMPTY = 0
-    BASE = 1
-    SHARP = 2
-    STRONG = 3
-    FAST = 4
-    GLASSES = 5
-    GLOVES = 6
-    BOOTS = 7
-    GOLD = 8
-    WATER = 9
-    TREE = 10
-    STONE = 11
-    SCROLL = 12
 
-@dataclass
+@dataclass(frozen=True)
 class Pos:
     x: int
     y: int
 
-    def __hash__(self):
-        return 10000 * self.x + self.y
+    def go(self, direction: Direction) -> 'Pos':
+        if direction == Direction.UP:
+            return Pos(self.x, self.y-1)
+        if direction == Direction.DOWN:
+            return Pos(self.x, self.y+1)
+        if direction == Direction.LEFT:
+            return Pos(self.x-1, self.y)
+        if direction == Direction.RIGHT:
+            return Pos(self.x+1, self.y)
+        raise ValueError(f'invalid direction: {direction}')
+
+    def get_direction(self, toPos: 'Pos') -> Direction:
+        if self.x == toPos.x and self.y == toPos.y + 1:
+            return Direction.DOWN
+        if self.x == toPos.x and self.y == toPos.y - 1:
+            return Direction.UP
+        if self.x == toPos.x + 1 and self.y == toPos.y:
+            return Direction.RIGHT
+        if self.x == toPos.x - 1 and self.y == toPos.y:
+            return Direction.LEFT
+        raise ValueError(f'{self} and {toPos} not neighboring, cannot get direction')
 
 def distance(p1: Pos, p2: Pos) -> float:
     return sqrt(abs(p1.x - p2.x)**2 + abs(p1.y - p2.y)**2)
@@ -34,7 +41,9 @@ class Board:
     def __init__(self, size: Pos):
         self.size: Pos = size
         self.squares = [Square.EMPTY] * size.x * size.y
-        self.editedSquares = set()
+        self.editedSquares: Set[Pos] = set()
+        self.basePos: Pos = Pos(0, 0)
+        self.characterSquares: Dict[Tuple[Color, AgentType], Pos] = {}
 
     def clear(self):
         self.squares = [Square.EMPTY] * self.size.x * self.size.y
@@ -50,6 +59,9 @@ class Board:
     def in_bounds(self, p: Pos):
         return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
 
+    def is_accessible(self, pos: Pos) -> bool:
+        return self.in_bounds(pos) and self.get_square(pos) not in [Square.STONE]
+
     def move_square(self, pFrom: Pos, pTo: Pos):
         self.set_square(pTo, self.get_square(pFrom))
         self.set_square(pFrom, Square.EMPTY)
@@ -57,6 +69,15 @@ class Board:
     def set_square(self, p: Pos, value):
         self.squares[p.x + self.size.x*p.y] = value
         self.editedSquares.add(p)
+
+    def get_vision(self, pos: Pos, sight: int):
+        startX = max(pos.x - sight, 0)
+        startY = max(pos.y - sight, 0)
+        endX = min(pos.x + sight + 1, self.size.x)
+        endY = min(pos.y + sight + 1, self.size.y)
+
+        for x, y in zip(range(startX, endX), range(startY, endY)):
+            yield Pos(x, y), self.get_square(Pos(x, y))
 
     def place_stone(self, p: Pos, size: int):
         if not self.in_bounds(p):
@@ -125,7 +146,8 @@ class Board:
         for stoneSize in STONES:
             self.place_stone(self.find_empty_square(), stoneSize)
 
-        self.set_square(self.find_empty_square(), Square.BASE)
+        self.basePos = self.find_empty_square()
+        self.set_square(self.basePos, Square.BASE)
 
         for _ in range(BOOTS_CNT):
             self.set_square(self.find_empty_square(), Square.BOOTS)
