@@ -23,6 +23,17 @@ class Pos:
             return Pos(self.x+1, self.y)
         raise ValueError(f'invalid direction: {direction}')
 
+    def get_direction(self, toPos: 'Pos') -> Direction:
+        if self.x == toPos.x and self.y == toPos.y + 1:
+            return Direction.DOWN
+        if self.x == toPos.x and self.y == toPos.y - 1:
+            return Direction.UP
+        if self.x == toPos.x + 1 and self.y == toPos.y:
+            return Direction.RIGHT
+        if self.x == toPos.x - 1 and self.y == toPos.y:
+            return Direction.LEFT
+        raise ValueError(f'{self} and {toPos} not neighboring, cannot get direction')
+
 def distance(p1: Pos, p2: Pos) -> float:
     return sqrt(abs(p1.x - p2.x)**2 + abs(p1.y - p2.y)**2)
 

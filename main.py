@@ -3,7 +3,7 @@ import config
 import time
 from board import Board, Square, Pos
 from game import Game
-from strategy import find_path
+
 
 # TODOs
 #  - different colors for teams
