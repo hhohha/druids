@@ -1,3 +1,7 @@
+from typing import Set, Dict, Callable, List
+from board import Board, Pos
+from enums import ActionType, Direction, Square, Color, AgentType
+
 from typing import List
 from dataclasses import dataclass
 from config import SPELL_PAYOFFS
@@ -56,5 +60,5 @@ class Game:
         resources: List[int] = [0, 0, 0, 0]
         for _ in range(scrolls):
             resources[random.randint(0, 3)] += 1
-        # return Spell(*resources, SPELL_PAYOFFS[scrolls])
+        #return Spell(*resources, SPELL_PAYOFFS[scrolls])
         return Spell(resources[0], resources[1], resources[2], resources[3], SPELL_PAYOFFS[scrolls])
